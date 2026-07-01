@@ -130,7 +130,7 @@ body {
 .overlay.show { display: flex; }
 .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 22px; max-width: 560px; width: 90%; max-height: 90vh; overflow-y: auto; }
 .m-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
-.m-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 14px; }
+.m-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 14px; flex-wrap: wrap; }
 .pat-inp { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 7px 9px; border-radius: 4px; font-size: 13px; font-family: monospace; margin: 7px 0; }
 .note { font-size: 10px; color: var(--text-muted); margin-top: 5px; }
 .tm-list { border: 1px solid var(--border); border-radius: 4px; padding: 6px; max-height: 180px; overflow-y: auto; margin-bottom: 7px; }
@@ -150,6 +150,38 @@ body {
 #toast.s { background: var(--confirmed); color: #fff; }
 #toast.e { background: var(--rejected); color: #fff; }
 #toast.i { background: var(--blue); color: #fff; }
+#pane-nav { display: none; }
+@media (max-width: 767px) {
+  body { height: 100dvh; }
+  #header { flex-wrap: wrap; gap: 6px 8px; min-height: auto; padding: 6px 10px; }
+  #header h1 { font-size: 14px; }
+  #prog-wrap { order: 3; min-width: unset; width: 100%; }
+  .spacer { display: none; }
+  #main { position: relative; }
+  #left, #center, #right {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%; border: none;
+  }
+  #left { display: none; }
+  #right { display: none; }
+  #pane-nav {
+    display: flex;
+    background: var(--surface);
+    border-top: 2px solid var(--border);
+    flex-shrink: 0;
+  }
+  .pnav-btn {
+    flex: 1; padding: 12px 4px 10px; text-align: center;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer; border: none; border-top: 3px solid transparent;
+    background: transparent; color: var(--text-muted);
+    transition: color .15s;
+  }
+  .pnav-btn.pnav-active { color: var(--accent); border-top-color: var(--accent); }
+  .grid2 { grid-template-columns: 1fr; }
+  .modal { max-height: 85dvh; width: 95%; }
+  .btn { font-size: 11px; padding: 5px 8px; }
+}
 </style>
 </head>
 <body>
@@ -214,7 +246,7 @@ body {
     <div class="m-title">&#9881;&#65039; 設定</div>
     <div class="fg">
       <div class="pane-lbl">GitHub PAT</div>
-      <div style="display:flex;align-items:center;gap:7px">
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
         <span id="pat-disp" style="font-family:monospace;font-size:12px;color:var(--text-muted)"></span>
         <button class="btn btn-sm btn-secondary" id="pat-change">変更</button>
         <button class="btn btn-sm btn-danger" id="pat-del">削除</button>
@@ -245,7 +277,7 @@ body {
   <span class="spacer"></span>
   <span id="badge"></span>
   <button class="btn btn-success" id="btn-new">&#10003; 新規採用</button>
-  <button class="btn btn-primary" id="btn-sync">&#128260; vocab-appに反映</button>
+  <button class="btn btn-primary" id="btn-sync">&#128260; 反映</button>
   <button class="btn btn-secondary" id="btn-cfg">&#9881;</button>
 </div>
 
@@ -325,10 +357,17 @@ body {
       <div class="ef-actions">
         <button class="btn btn-primary" id="ef-save" style="flex:1">&#128190; 保存</button>
         <button class="btn btn-secondary" id="ef-next">次の未タグ&#8594;</button>
+        <button class="btn btn-secondary" id="ef-back-mob" style="display:none">&#8592; 一覧</button>
       </div>
     </div>
   </div>
 </div>
+
+<nav id="pane-nav">
+  <button class="pnav-btn pnav-active" data-pane="center">一覧</button>
+  <button class="pnav-btn" data-pane="left">フィルター</button>
+  <button class="pnav-btn" data-pane="right">編集</button>
+</nav>
 
 <div id="toast"></div>
 
@@ -343,6 +382,14 @@ let S={names:[],hTags:[],tTags:[],pat:null,selId:null,snap:null,
 
 const $=id=>document.getElementById(id);
 const qsa=(s,el=document)=>Array.from(el.querySelectorAll(s));
+
+function isMob(){return window.innerWidth<768;}
+function switchPane(name){
+  if(!isMob()) return;
+  ['left','center','right'].forEach(p=>{$(p).style.display=p===name?'block':'none';});
+  qsa('.pnav-btn').forEach(b=>b.classList.toggle('pnav-active',b.dataset.pane===name));
+  $('ef-back-mob').style.display=name==='right'?'inline':'none';
+}
 
 function save(){
   localStorage.setItem('e_names',JSON.stringify(S.names));
@@ -392,7 +439,7 @@ function renderList(){
     const nm=[n.base,n.mid,n.final].filter(v=>v&&v!=='—').join(' → ')||n.id;
     const hc=(n.habitat||[]).map(h=>`<span class="chip h">${h}</span>`).join('');
     const tc=(n.type||[]).map(t=>`<span class="chip t">${t}</span>`).join('');
-    const memo=n.memo?`<div class="card-memo">${n.memo.slice(0,40)}${n.memo.length>40?'…':''}</div>`:\';
+    const memo=n.memo?`<div class="card-memo">${n.memo.slice(0,40)}${n.memo.length>40?'…':''}</div>`:'';
     return `<div class="card${noTag?' untagged':''}${n.id===S.selId?' sel':''}" data-id="${n.id}">
       <div class="card-top"><span class="card-id">${n.id}</span><span class="card-animal">${n.animal||'—'}</span></div>
       <div class="card-name">${nm}</div>
@@ -439,6 +486,7 @@ function selChar(id){
   $('ef-sec').value=c.section||''; $('ef-memo').value=c.memo||'';
   renderCbs('ef-h',S.hTags,c.habitat||[]); renderCbs('ef-t',S.tTags,c.type||[]);
   qsa('.card').forEach(el=>el.classList.toggle('sel',el.dataset.id===id));
+  switchPane('right');
 }
 function renderCbs(pid,all,sel){
   $(pid).innerHTML=all.map(tag=>`<label class="tcb"><input type="checkbox" value="${tag}" ${sel.includes(tag)?'checked':''}> <span>${tag}</span></label>`).join('');
@@ -580,6 +628,7 @@ $('nc-submit').addEventListener('click',()=>{
 });
 $('ef-save').addEventListener('click',saveEdit);
 $('ef-next').addEventListener('click',nextUntagged);
+$('ef-back-mob').addEventListener('click',()=>switchPane('center'));
 $('ef-h-add').addEventListener('click',()=>{
   const v=$('ef-hc').value.trim(); if(!v) return;
   if(!S.hTags.includes(v)){S.hTags.push(v);save();}
@@ -595,7 +644,7 @@ $('ef-t-add').addEventListener('click',()=>{
   $('ef-tc').value=''; selChar(S.selId);
 });
 function b64e(s){return btoa(unescape(encodeURIComponent(s)));}
-function b64d(b){return decodeURIComponent(escape(atob(b.replace(/\n/g,''))));}
+function b64d(b){return decodeURIComponent(escape(atob(b.replace(/\n/g,''))));}  
 async function ghGet(p){
   const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${p}`,
     {headers:{'Authorization':`Bearer ${S.pat}`,'Accept':'application/vnd.github.v3+json'}});
@@ -648,6 +697,7 @@ $('sync-yes').addEventListener('click',async()=>{
     badge(); toast('vocab-app に反映しました ✅','s');
   }catch(e){toast(`反映失敗: ${e.message}`,'e',7000);}
 });
+qsa('.pnav-btn').forEach(b=>b.addEventListener('click',()=>switchPane(b.dataset.pane)));
 async function init(){
   load();
   if(!S.names.length){
