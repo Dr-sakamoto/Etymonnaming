@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Etymon Tools</title>
+<style>
+:root {
+  --bg: #12121f;
+  --surface: #1c1c2e;
+  --surface2: #252540;
+  --accent: #e94560;
+  --text: #e8e8f0;
+  --text-muted: #7070a0;
+  --border: #2a2a45;
+  --confirmed: #27ae60;
+  --pending: #e67e22;
+  --rejected: #c0392b;
+  --blue: #3498db;
+  --orange: #f39c12;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-height: 48px;
+}
+#header h1 { font-size: 15px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+#prog-wrap { min-width: 180px; }
+#prog-label { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; }
+#prog-bar { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+#prog-fill { height: 100%; background: var(--confirmed); border-radius: 3px; transition: width .3s; }
+.spacer { flex: 1; }
+.btn {
+  padding: 5px 11px; border: none; border-radius: 5px;
+  cursor: pointer; font-size: 12px; font-weight: 600; transition: opacity .15s; white-space: nowrap;
+}
+.btn:hover { opacity: .8; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-success { background: var(--confirmed); color: #fff; }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-danger { background: var(--rejected); color: #fff; }
+.btn-sm { padding: 3px 7px; font-size: 11px; }
+#badge {
+  background: var(--orange); color: #fff;
+  padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700;
+  display: none; white-space: nowrap;
+}
+#main { display: flex; flex: 1; overflow: hidden; }
+#left { width: 210px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; flex-shrink: 0; }
+#center { flex: 1; overflow-y: auto; padding: 10px; }
+#right { width: 290px; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; flex-shrink: 0; }
+.pane-sec { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.pane-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); margin-bottom: 7px; }
+#status-tabs { display: flex; gap: 3px; }
+.stab {
+  flex: 1; padding: 5px 2px; text-align: center; border-radius: 4px;
+  cursor: pointer; font-size: 10px; font-weight: 700;
+  border: 1px solid var(--border); background: transparent; color: var(--text-muted);
+}
+.stab.active[data-s="confirmed"] { background: var(--confirmed); color: #fff; border-color: var(--confirmed); }
+.stab.active[data-s="pending"] { background: var(--pending); color: #fff; border-color: var(--pending); }
+.stab.active[data-s="rejected"] { background: var(--rejected); color: #fff; border-color: var(--rejected); }
+.sec-cb { display: flex; align-items: center; gap: 5px; font-size: 11px; cursor: pointer; margin-bottom: 3px; }
+.sec-cb input { cursor: pointer; }
+.dash-grp { margin-bottom: 10px; }
+.dash-ttl { font-size: 10px; color: var(--text-muted); margin-bottom: 5px; }
+.sec-prog-row { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; border-bottom: 1px solid var(--border); }
+.sec-prog-row:last-child { border: none; }
+.prog-done { color: var(--confirmed); font-weight: 700; }
+.bar-row { margin-bottom: 4px; }
+.bar-labels { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 2px; color: var(--text-muted); }
+.bar-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--accent); border-radius: 2px; }
+.search-inp {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); padding: 6px 9px; border-radius: 4px; font-size: 12px; margin-bottom: 10px;
+}
+.search-inp:focus { outline: none; border-color: var(--accent); }
+.search-inp::placeholder { color: var(--text-muted); }
+#char-list { display: flex; flex-direction: column; gap: 5px; }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-left: 3px solid transparent;
+  border-radius: 5px; padding: 8px 10px; cursor: pointer; transition: all .12s;
+}
+.card:hover { background: var(--surface2); border-color: var(--accent); }
+.card.sel { background: var(--surface2); border-color: var(--accent); }
+.card.untagged { border-left-color: var(--orange); }
+.card-top { display: flex; justify-content: space-between; margin-bottom: 3px; }
+.card-id { font-size: 10px; color: var(--text-muted); }
+.card-animal { font-size: 10px; color: var(--text-muted); }
+.card-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.card-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+.chip { font-size: 10px; padding: 1px 5px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); }
+.chip.h { border-color: var(--blue); color: var(--blue); }
+.chip.t { border-color: #9b59b6; color: #9b59b6; }
+.card-memo { font-size: 10px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.empty { text-align: center; padding: 30px; color: var(--text-muted); }
+#rp-ph { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); text-align: center; padding: 20px; }
+#ef { padding: 14px; display: none; }
+.ef-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; padding-bottom: 7px; border-bottom: 1px solid var(--border); }
+.fg { margin-bottom: 8px; }
+.fl { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
+.fi, .fs, .fta { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 7px; border-radius: 4px; font-size: 12px; }
+.fi:focus, .fs:focus, .fta:focus { outline: none; border-color: var(--accent); }
+.fta { resize: vertical; min-height: 50px; font-family: inherit; }
+.fs option { background: var(--surface); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.tag-cbs { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 4px; }
+.tcb { display: flex; align-items: center; gap: 3px; font-size: 11px; cursor: pointer; }
+.custom-row { display: flex; gap: 4px; margin-top: 3px; }
+.custom-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px 7px; border-radius: 4px; font-size: 11px; }
+.ef-actions { display: flex; gap: 7px; margin-top: 12px; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 1000; display: none; align-items: center; justify-content: center; }
+.overlay.show { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 22px; max-width: 560px; width: 90%; max-height: 90vh; overflow-y: auto; }
+.m-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+.m-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 14px; }
+.pat-inp { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 7px 9px; border-radius: 4px; font-size: 13px; font-family: monospace; margin: 7px 0; }
+.note { font-size: 10px; color: var(--text-muted); margin-top: 5px; }
+.tm-list { border: 1px solid var(--border); border-radius: 4px; padding: 6px; max-height: 180px; overflow-y: auto; margin-bottom: 7px; }
+.tm-item { display: flex; align-items: center; gap: 5px; padding: 2px 0; }
+.tm-name { flex: 1; font-size: 12px; }
+.tm-inp { flex: 1; display: none; background: var(--bg); border: 1px solid var(--accent); color: var(--text); padding: 2px 5px; border-radius: 3px; font-size: 11px; }
+.add-row { display: flex; gap: 5px; }
+.add-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px 7px; border-radius: 4px; font-size: 11px; }
+.ptbl { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 7px; }
+.ptbl th, .ptbl td { border: 1px solid var(--border); padding: 3px 7px; text-align: left; }
+.ptbl th { background: var(--surface2); color: var(--text-muted); }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+#toast { position: fixed; bottom: 18px; right: 18px; padding: 9px 14px; border-radius: 5px; font-size: 12px; font-weight: 600; z-index: 9999; opacity: 0; transition: opacity .25s; pointer-events: none; }
+#toast.show { opacity: 1; }
+#toast.s { background: var(--confirmed); color: #fff; }
+#toast.e { background: var(--rejected); color: #fff; }
+#toast.i { background: var(--blue); color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="pat-ov">
+  <div class="modal" style="max-width:380px">
+    <div class="m-title">&#128273; GitHub PAT を入力</div>
+    <p style="font-size:12px;color:var(--text-muted)">vocab-app への反映に必要。スコープ: <code>public_repo</code></p>
+    <input type="password" class="pat-inp" id="pat-inp" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+    <p class="note">PAT は localStorage に保存。設定画面から削除できます。</p>
+    <div class="m-actions">
+      <button class="btn btn-secondary" id="pat-skip">スキップ（読み取りのみ）</button>
+      <button class="btn btn-primary" id="pat-save">保存して続ける</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="nc-ov">
+  <div class="modal">
+    <div class="m-title">&#10003; 新規採用</div>
+    <div id="nc-form">
+      <div class="grid2">
+        <div class="fg"><label class="fl">内部ID *</label><input type="text" class="fi" id="nc-id" placeholder="bulbasaur"></div>
+        <div class="fg"><label class="fl">ステージ</label><select class="fs" id="nc-stages"><option value="2">2段階</option><option value="3">3段階</option><option value="standalone">単独</option></select></div>
+        <div class="fg"><label class="fl">基本形</label><input type="text" class="fi" id="nc-base"></div>
+        <div class="fg"><label class="fl">中間形</label><input type="text" class="fi" id="nc-mid"></div>
+        <div class="fg"><label class="fl">最終形 *</label><input type="text" class="fi" id="nc-final"></div>
+        <div class="fg"><label class="fl">動物イメージ</label><input type="text" class="fi" id="nc-animal"></div>
+        <div class="fg"><label class="fl">status</label><select class="fs" id="nc-status"><option value="confirmed">confirmed</option><option value="pending">pending</option></select></div>
+        <div class="fg"><label class="fl">section</label><select class="fs" id="nc-section"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option><option value="standalone">standalone</option><option value="">—（未定）</option></select></div>
+      </div>
+      <div class="fg"><label class="fl">生息地タグ</label><div class="tag-cbs" id="nc-h"></div></div>
+      <div class="fg"><label class="fl">属性タグ</label><div class="tag-cbs" id="nc-t"></div></div>
+      <div class="fg"><label class="fl">memo</label><textarea class="fta" id="nc-memo" rows="2"></textarea></div>
+    </div>
+    <div id="nc-prev" style="display:none">
+      <p style="font-size:11px;color:var(--text-muted)">以下の内容で追加：</p>
+      <table class="ptbl" id="nc-tbl"></table>
+    </div>
+    <div class="m-actions">
+      <button class="btn btn-secondary" id="nc-cancel">キャンセル</button>
+      <button class="btn btn-secondary" id="nc-back" style="display:none">戻る</button>
+      <button class="btn btn-secondary" id="nc-confirm">確認</button>
+      <button class="btn btn-success" id="nc-submit" style="display:none">確定して追加</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="sync-ov">
+  <div class="modal" style="max-width:380px">
+    <div class="m-title">&#128260; vocab-app に反映</div>
+    <p id="sync-msg" style="font-size:12px;color:var(--text-muted);margin-bottom:10px"></p>
+    <div class="m-actions">
+      <button class="btn btn-secondary" id="sync-no">キャンセル</button>
+      <button class="btn btn-success" id="sync-yes">反映する</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="cfg-ov">
+  <div class="modal">
+    <div class="m-title">&#9881;&#65039; 設定</div>
+    <div class="fg">
+      <div class="pane-lbl">GitHub PAT</div>
+      <div style="display:flex;align-items:center;gap:7px">
+        <span id="pat-disp" style="font-family:monospace;font-size:12px;color:var(--text-muted)"></span>
+        <button class="btn btn-sm btn-secondary" id="pat-change">変更</button>
+        <button class="btn btn-sm btn-danger" id="pat-del">削除</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px">
+      <div>
+        <div class="pane-lbl">生息地タグ</div>
+        <div class="tm-list" id="h-master"></div>
+        <div class="add-row"><input type="text" id="h-inp" placeholder="新しいタグ"><button class="btn btn-sm btn-primary" id="h-add">追加</button></div>
+      </div>
+      <div>
+        <div class="pane-lbl">属性タグ</div>
+        <div class="tm-list" id="t-master"></div>
+        <div class="add-row"><input type="text" id="t-inp" placeholder="新しいタグ"><button class="btn btn-sm btn-primary" id="t-add">追加</button></div>
+      </div>
+    </div>
+    <div class="m-actions"><button class="btn btn-secondary" id="cfg-close">閉じる</button></div>
+  </div>
+</div>
+
+<div id="header">
+  <h1>Etymon Tools</h1>
+  <div id="prog-wrap">
+    <div id="prog-label">確定 0 / 総数 0</div>
+    <div id="prog-bar"><div id="prog-fill" style="width:0%"></div></div>
+  </div>
+  <span class="spacer"></span>
+  <span id="badge"></span>
+  <button class="btn btn-success" id="btn-new">&#10003; 新規採用</button>
+  <button class="btn btn-primary" id="btn-sync">&#128260; vocab-appに反映</button>
+  <button class="btn btn-secondary" id="btn-cfg">&#9881;</button>
+</div>
+
+<div id="main">
+  <div id="left">
+    <div class="pane-sec">
+      <div class="pane-lbl">ステータス</div>
+      <div id="status-tabs">
+        <button class="stab active" data-s="confirmed">採用済み</button>
+        <button class="stab" data-s="pending">保留</button>
+        <button class="stab" data-s="rejected">不採用</button>
+      </div>
+    </div>
+    <div class="pane-sec">
+      <div class="pane-lbl">セクション</div>
+      <div id="sec-fil">
+        <label class="sec-cb"><input type="checkbox" value="A" checked> A（やわらか）</label>
+        <label class="sec-cb"><input type="checkbox" value="B" checked> B（アクティブ）</label>
+        <label class="sec-cb"><input type="checkbox" value="C" checked> C（ダーク）</label>
+        <label class="sec-cb"><input type="checkbox" value="D" checked> D（ヘン/ギャグ）</label>
+        <label class="sec-cb"><input type="checkbox" value="E" checked> E（レア/神秘）</label>
+        <label class="sec-cb"><input type="checkbox" value="standalone" checked> 単独</label>
+        <label class="sec-cb"><input type="checkbox" value="" checked> 未定</label>
+      </div>
+    </div>
+    <div class="pane-sec">
+      <div class="pane-lbl">ダッシュボード</div>
+      <div class="dash-grp"><div class="dash-ttl">セクション進捗</div><div id="sec-prog"></div></div>
+      <div class="dash-grp"><div class="dash-ttl">属性分布</div><div id="type-dist"></div></div>
+      <div class="dash-grp"><div class="dash-ttl">生息地分布</div><div id="hab-dist"></div></div>
+    </div>
+  </div>
+
+  <div id="center">
+    <input type="text" class="search-inp" id="search" placeholder="&#128269; 検索（ID・名前）">
+    <div id="char-list"></div>
+  </div>
+
+  <div id="right">
+    <div id="rp-ph"><div><p style="font-size:22px;margin-bottom:7px">&#128072;</p><p>キャラクターを選択すると<br>編集フォームが開きます</p></div></div>
+    <div id="ef">
+      <div class="ef-title" id="ef-ttl"></div>
+      <div class="grid2">
+        <div class="fg"><label class="fl">基本形</label><input type="text" class="fi" id="ef-base"></div>
+        <div class="fg"><label class="fl">中間形</label><input type="text" class="fi" id="ef-mid"></div>
+        <div class="fg"><label class="fl">最終形</label><input type="text" class="fi" id="ef-final"></div>
+        <div class="fg"><label class="fl">ステージ</label>
+          <select class="fs" id="ef-stages">
+            <option value="">—</option><option value="2">2段階</option><option value="3">3段階</option><option value="standalone">単独</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">動物イメージ</label><input type="text" class="fi" id="ef-animal"></div>
+        <div class="fg"><label class="fl">status</label>
+          <select class="fs" id="ef-status">
+            <option value="confirmed">confirmed</option><option value="pending">pending</option><option value="rejected">rejected</option>
+          </select>
+        </div>
+        <div class="fg" style="grid-column:span 2"><label class="fl">section</label>
+          <select class="fs" id="ef-sec">
+            <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+            <option value="D">D</option><option value="E">E</option>
+            <option value="standalone">standalone</option><option value="">—（未定）</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">生息地タグ</label>
+        <div class="tag-cbs" id="ef-h"></div>
+        <div class="custom-row"><input type="text" id="ef-hc" placeholder="カスタム"><button class="btn btn-sm btn-secondary" id="ef-h-add">+</button></div>
+      </div>
+      <div class="fg">
+        <label class="fl">属性タグ</label>
+        <div class="tag-cbs" id="ef-t"></div>
+        <div class="custom-row"><input type="text" id="ef-tc" placeholder="カスタム"><button class="btn btn-sm btn-secondary" id="ef-t-add">+</button></div>
+      </div>
+      <div class="fg"><label class="fl">memo</label><textarea class="fta" id="ef-memo"></textarea></div>
+      <div class="ef-actions">
+        <button class="btn btn-primary" id="ef-save" style="flex:1">&#128190; 保存</button>
+        <button class="btn btn-secondary" id="ef-next">次の未タグ&#8594;</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SEC_TGT = {A:25,B:21,C:17,D:13,E:6};
+const DEF_HAB = ['森','草原','砂漠','雪山','海','深海','川','湿地','地下','洞窟','火山','空','都市','廃墟'];
+const DEF_TYPE = ['炎','水','草','電気','氷','格闘','毒','地面','飛行','エスパー','虫','岩','ゴースト','ドラゴン','悪','鉄','フェアリー','ノーマル'];
+const OWNER='Dr-sakamoto',REPO='vocab-app',FILE='ETYMON_NAMES.md';
+
+let S={names:[],hTags:[],tTags:[],pat:null,selId:null,snap:null,
+  f:{status:'confirmed',secs:new Set(['A','B','C','D','E','standalone','']),q:''}};
+
+const $=id=>document.getElementById(id);
+const qsa=(s,el=document)=>Array.from(el.querySelectorAll(s));
+
+function save(){
+  localStorage.setItem('e_names',JSON.stringify(S.names));
+  localStorage.setItem('e_htag',JSON.stringify(S.hTags));
+  localStorage.setItem('e_ttag',JSON.stringify(S.tTags));
+}
+function load(){
+  const n=localStorage.getItem('e_names'); if(n) S.names=JSON.parse(n);
+  const h=localStorage.getItem('e_htag'); S.hTags=h?JSON.parse(h):[...DEF_HAB];
+  const t=localStorage.getItem('e_ttag'); S.tTags=t?JSON.parse(t):[...DEF_TYPE];
+  S.pat=localStorage.getItem('e_pat')||null;
+  const sn=localStorage.getItem('e_snap'); S.snap=sn?JSON.parse(sn):null;
+}
+function diffCount(){
+  if(!S.snap) return S.names.length;
+  const m={}; S.snap.forEach(n=>{m[n.id]=JSON.stringify(n);});
+  let c=0;
+  S.names.forEach(n=>{if(m[n.id]!==JSON.stringify(n))c++;});
+  const cur=new Set(S.names.map(n=>n.id));
+  S.snap.forEach(n=>{if(!cur.has(n.id))c++;});
+  return c;
+}
+function badge(){
+  const el=$('badge'), c=diffCount();
+  if(c>0){el.textContent=`未反映 ${c}件`;el.style.display='inline';} else el.style.display='none';
+}
+function toast(msg,type='i',ms=3000){
+  const el=$('toast'); el.textContent=msg; el.className=`show ${type}`;
+  clearTimeout(el._t); el._t=setTimeout(()=>{el.className='';},ms);
+}
+function fil(){
+  return S.names.filter(n=>{
+    if(n.status!==S.f.status) return false;
+    if(!S.f.secs.has(n.section||'')) return false;
+    if(S.f.q){
+      const q=S.f.q.toLowerCase();
+      if(![n.id,n.base,n.mid,n.final,n.animal,n.memo].filter(Boolean).join(' ').toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+function renderList(){
+  const el=$('char-list'), items=fil();
+  if(!items.length){el.innerHTML='<div class="empty">該当なし</div>';return;}
+  el.innerHTML=items.map(n=>{
+    const noTag=!n.habitat?.length&&!n.type?.length;
+    const nm=[n.base,n.mid,n.final].filter(v=>v&&v!=='—').join(' → ')||n.id;
+    const hc=(n.habitat||[]).map(h=>`<span class="chip h">${h}</span>`).join('');
+    const tc=(n.type||[]).map(t=>`<span class="chip t">${t}</span>`).join('');
+    const memo=n.memo?`<div class="card-memo">${n.memo.slice(0,40)}${n.memo.length>40?'…':''}</div>`:\';
+    return `<div class="card${noTag?' untagged':''}${n.id===S.selId?' sel':''}" data-id="${n.id}">
+      <div class="card-top"><span class="card-id">${n.id}</span><span class="card-animal">${n.animal||'—'}</span></div>
+      <div class="card-name">${nm}</div>
+      ${hc||tc?`<div class="card-tags">${hc}${tc}</div>`:''}
+      ${memo}
+    </div>`;
+  }).join('');
+  qsa('.card',el).forEach(c=>c.addEventListener('click',()=>selChar(c.dataset.id)));
+}
+function renderDash(){
+  const conf=S.names.filter(n=>n.status==='confirmed');
+  $('sec-prog').innerHTML=Object.entries(SEC_TGT).map(([s,tgt])=>{
+    const done=conf.filter(n=>n.section===s).length;
+    return `<div class="sec-prog-row"><span>Section ${s}</span><span><span class="prog-done">${done}</span> / ${tgt}</span></div>`;
+  }).join('');
+  const fc=fil().filter(n=>n.status==='confirmed');
+  renderDist('type-dist',fc,'type'); renderDist('hab-dist',fc,'habitat');
+}
+function renderDist(id,chars,field){
+  const el=$(id), cnt={};
+  chars.forEach(c=>(c[field]||[]).forEach(t=>{cnt[t]=(cnt[t]||0)+1;}));
+  const entries=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  if(!entries.length){el.innerHTML='<div style="font-size:10px;color:var(--text-muted)">データなし</div>';return;}
+  const max=entries[0][1];
+  el.innerHTML=entries.map(([tag,c])=>{
+    const pct=chars.length>0?Math.round(c/chars.length*100):0;
+    return `<div class="bar-row"><div class="bar-labels"><span>${tag}</span><span>${c}(${pct}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(c/max*100)}%"></div></div></div>`;
+  }).join('');
+}
+function updProg(){
+  const conf=S.names.filter(n=>n.status==='confirmed').length, tot=S.names.length;
+  $('prog-label').textContent=`確定 ${conf} / 総数 ${tot}`;
+  $('prog-fill').style.width=`${tot>0?Math.round(conf/tot*100):0}%`;
+}
+function renderAll(){renderList();renderDash();updProg();badge();}
+
+function selChar(id){
+  S.selId=id; const c=S.names.find(n=>n.id===id); if(!c) return;
+  $('rp-ph').style.display='none'; $('ef').style.display='block';
+  $('ef-ttl').textContent=`${id} — 編集`;
+  $('ef-base').value=c.base||''; $('ef-mid').value=c.mid||''; $('ef-final').value=c.final||'';
+  $('ef-stages').value=c.stages!=null?String(c.stages):'';
+  $('ef-animal').value=c.animal||''; $('ef-status').value=c.status||'pending';
+  $('ef-sec').value=c.section||''; $('ef-memo').value=c.memo||'';
+  renderCbs('ef-h',S.hTags,c.habitat||[]); renderCbs('ef-t',S.tTags,c.type||[]);
+  qsa('.card').forEach(el=>el.classList.toggle('sel',el.dataset.id===id));
+}
+function renderCbs(pid,all,sel){
+  $(pid).innerHTML=all.map(tag=>`<label class="tcb"><input type="checkbox" value="${tag}" ${sel.includes(tag)?'checked':''}> <span>${tag}</span></label>`).join('');
+}
+function getChecked(pid){
+  return qsa(`#${pid} input:checked`).map(el=>el.value);
+}
+function saveEdit(){
+  if(!S.selId) return;
+  const idx=S.names.findIndex(n=>n.id===S.selId); if(idx===-1) return;
+  const sv=$('ef-stages').value;
+  S.names[idx]={...S.names[idx],
+    base:$('ef-base').value||null, mid:$('ef-mid').value||null, final:$('ef-final').value||null,
+    stages:sv===''?null:sv==='standalone'?'standalone':parseInt(sv),
+    animal:$('ef-animal').value||null,
+    status:$('ef-status').value, section:$('ef-sec').value||null,
+    habitat:getChecked('ef-h'), type:getChecked('ef-t'), memo:$('ef-memo').value
+  };
+  save(); renderAll(); toast('保存しました','s');
+}
+function nextUntagged(){
+  const items=fil().filter(n=>!n.habitat?.length&&!n.type?.length);
+  if(!items.length){toast('未タグ付けはいません','i');return;}
+  const cur=items.findIndex(n=>n.id===S.selId);
+  const nxt=items[(cur+1)%items.length]; selChar(nxt.id);
+  const card=document.querySelector(`.card[data-id="${nxt.id}"]`);
+  if(card) card.scrollIntoView({block:'nearest'});
+}
+function initFilters(){
+  qsa('.stab').forEach(t=>t.addEventListener('click',()=>{
+    qsa('.stab').forEach(x=>x.classList.remove('active')); t.classList.add('active');
+    S.f.status=t.dataset.s; renderAll();
+  }));
+  qsa('#sec-fil input').forEach(cb=>cb.addEventListener('change',()=>{
+    S.f.secs=new Set(qsa('#sec-fil input:checked').map(el=>el.value)); renderAll();
+  }));
+  $('search').addEventListener('input',e=>{S.f.q=e.target.value;renderAll();});
+}
+function showPat(){$('pat-ov').classList.add('show');$('pat-inp').value='';}
+function hidePat(){$('pat-ov').classList.remove('show');}
+$('pat-save').addEventListener('click',()=>{
+  const v=$('pat-inp').value.trim(); if(!v){toast('PATを入力してください','e');return;}
+  S.pat=v; localStorage.setItem('e_pat',v); hidePat(); toast('PAT保存','s');
+});
+$('pat-skip').addEventListener('click',hidePat);
+function showCfg(){
+  const p=S.pat;
+  $('pat-disp').textContent=p?p.slice(0,4)+'*'.repeat(Math.max(0,p.length-4)):'（未設定）';
+  renderMaster('h-master',S.hTags,'habitat'); renderMaster('t-master',S.tTags,'type');
+  $('cfg-ov').classList.add('show');
+}
+function renderMaster(id,tags,kind){
+  $(id).innerHTML=tags.map((tag,i)=>`
+    <div class="tm-item">
+      <span class="tm-name" id="tmn-${kind}-${i}">${tag}</span>
+      <input class="tm-inp" id="tmi-${kind}-${i}" value="${tag}">
+      <button class="btn btn-sm btn-secondary" onclick="editTag('${kind}',${i})">&#9998;</button>
+      <button class="btn btn-sm btn-danger" onclick="delTag('${kind}',${i})">&#128465;</button>
+    </div>`).join('');
+}
+function editTag(kind,i){
+  const tags=kind==='habitat'?S.hTags:S.tTags;
+  const nm=$(`tmn-${kind}-${i}`), inp=$(`tmi-${kind}-${i}`);
+  nm.style.display='none'; inp.style.display='block'; inp.focus();
+  function confirm(){
+    const nv=inp.value.trim(); if(!nv){nm.style.display='';inp.style.display='none';return;}
+    const old=tags[i]; if(old===nv){nm.style.display='';inp.style.display='none';return;}
+    tags[i]=nv;
+    S.names.forEach(n=>{const a=n[kind]||[];const ix=a.indexOf(old);if(ix!==-1)a[ix]=nv;});
+    save(); badge(); renderMaster(kind==='habitat'?'h-master':'t-master',tags,kind);
+    toast(`「${old}」→「${nv}」`,'s');
+  }
+  inp.onblur=confirm;
+  inp.onkeydown=e=>{if(e.key==='Enter')confirm();else if(e.key==='Escape'){nm.style.display='';inp.style.display='none';}};
+}
+function delTag(kind,i){
+  const tags=kind==='habitat'?S.hTags:S.tTags, tag=tags[i];
+  const n=S.names.filter(x=>(x[kind]||[]).includes(tag)).length;
+  if(!confirm(`「${tag}」を削除。キャラ ${n} 体から除去されます。`)) return;
+  tags.splice(i,1); S.names.forEach(x=>{if(x[kind])x[kind]=x[kind].filter(t=>t!==tag);});
+  save(); renderAll(); renderMaster(kind==='habitat'?'h-master':'t-master',tags,kind); toast(`「${tag}」削除`,'s');
+}
+$('h-add').addEventListener('click',()=>{
+  const v=$('h-inp').value.trim(); if(!v||S.hTags.includes(v)) return;
+  S.hTags.push(v); save(); $('h-inp').value='';
+  renderMaster('h-master',S.hTags,'habitat'); toast(`生息地「${v}」追加`,'s');
+});
+$('t-add').addEventListener('click',()=>{
+  const v=$('t-inp').value.trim(); if(!v||S.tTags.includes(v)) return;
+  S.tTags.push(v); save(); $('t-inp').value='';
+  renderMaster('t-master',S.tTags,'type'); toast(`属性「${v}」追加`,'s');
+});
+$('pat-change').addEventListener('click',()=>{$('cfg-ov').classList.remove('show');showPat();});
+$('pat-del').addEventListener('click',()=>{
+  if(!confirm('PATを削除します。')) return;
+  S.pat=null; localStorage.removeItem('e_pat');
+  $('pat-disp').textContent='（未設定）'; toast('PAT削除','i');
+});
+$('cfg-close').addEventListener('click',()=>$('cfg-ov').classList.remove('show'));
+$('btn-cfg').addEventListener('click',showCfg);
+
+let ncP=null;
+function showNew(){
+  qsa('#nc-form input[type=text],#nc-form textarea').forEach(el=>el.value='');
+  $('nc-stages').value='2'; $('nc-status').value='confirmed'; $('nc-section').value='A';
+  $('nc-h').innerHTML=S.hTags.map(t=>`<label class="tcb"><input type="checkbox" value="${t}"> <span>${t}</span></label>`).join('');
+  $('nc-t').innerHTML=S.tTags.map(t=>`<label class="tcb"><input type="checkbox" value="${t}"> <span>${t}</span></label>`).join('');
+  $('nc-form').style.display='block'; $('nc-prev').style.display='none';
+  $('nc-confirm').style.display='inline'; $('nc-submit').style.display='none'; $('nc-back').style.display='none';
+  $('nc-ov').classList.add('show');
+}
+$('btn-new').addEventListener('click',showNew);
+$('nc-cancel').addEventListener('click',()=>$('nc-ov').classList.remove('show'));
+$('nc-confirm').addEventListener('click',()=>{
+  const id=$('nc-id').value.trim(), fin=$('nc-final').value.trim();
+  if(!id||!fin){toast('IDと最終形は必須','e');return;}
+  if(S.names.find(n=>n.id===id)){toast(`ID「${id}」は既存`,'e');return;}
+  const sv=$('nc-stages').value;
+  ncP={id,base:$('nc-base').value||null,mid:$('nc-mid').value||null,final:fin,
+    stages:sv==='standalone'?'standalone':parseInt(sv),
+    animal:$('nc-animal').value||null,status:$('nc-status').value,
+    section:$('nc-section').value||null,
+    habitat:qsa('#nc-h input:checked').map(el=>el.value),
+    type:qsa('#nc-t input:checked').map(el=>el.value),
+    memo:$('nc-memo').value};
+  $('nc-tbl').innerHTML='<tr><th>フィールド</th><th>値</th></tr>'+
+    Object.entries(ncP).map(([k,v])=>`<tr><td>${k}</td><td>${Array.isArray(v)?v.join('・'):(v??'—')}</td></tr>`).join('');
+  $('nc-form').style.display='none'; $('nc-prev').style.display='block';
+  $('nc-confirm').style.display='none'; $('nc-submit').style.display='inline'; $('nc-back').style.display='inline';
+});
+$('nc-back').addEventListener('click',()=>{
+  $('nc-form').style.display='block'; $('nc-prev').style.display='none';
+  $('nc-confirm').style.display='inline'; $('nc-submit').style.display='none'; $('nc-back').style.display='none';
+});
+$('nc-submit').addEventListener('click',()=>{
+  if(!ncP) return;
+  S.names.push(ncP); save(); renderAll();
+  $('nc-ov').classList.remove('show'); toast(`「${ncP.final}」追加`,'s'); ncP=null;
+});
+$('ef-save').addEventListener('click',saveEdit);
+$('ef-next').addEventListener('click',nextUntagged);
+$('ef-h-add').addEventListener('click',()=>{
+  const v=$('ef-hc').value.trim(); if(!v) return;
+  if(!S.hTags.includes(v)){S.hTags.push(v);save();}
+  const c=S.names.find(n=>n.id===S.selId);
+  if(c&&!c.habitat.includes(v))c.habitat.push(v);
+  $('ef-hc').value=''; selChar(S.selId);
+});
+$('ef-t-add').addEventListener('click',()=>{
+  const v=$('ef-tc').value.trim(); if(!v) return;
+  if(!S.tTags.includes(v)){S.tTags.push(v);save();}
+  const c=S.names.find(n=>n.id===S.selId);
+  if(c&&!c.type.includes(v))c.type.push(v);
+  $('ef-tc').value=''; selChar(S.selId);
+});
+function b64e(s){return btoa(unescape(encodeURIComponent(s)));}
+function b64d(b){return decodeURIComponent(escape(atob(b.replace(/\n/g,''))));}
+async function ghGet(p){
+  const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${p}`,
+    {headers:{'Authorization':`Bearer ${S.pat}`,'Accept':'application/vnd.github.v3+json'}});
+  if(!r.ok) throw new Error(`GitHub API ${r.status}`);
+  return r.json();
+}
+async function ghPut(p,content,sha,msg){
+  const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${p}`,{
+    method:'PUT',
+    headers:{'Authorization':`Bearer ${S.pat}`,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
+    body:JSON.stringify({message:msg,content:b64e(content),sha})
+  });
+  if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.message||`GitHub API ${r.status}`);}
+  return r.json();
+}
+function buildTbl(){
+  const hdr='| 内部ID | 基本形 | 中間形 | 最終形 | ステージ | 動物イメージ | status | section | habitat | type | memo |';
+  const sep='|---|---|---|---|---|---|---|---|---|---|---|';
+  const rows=S.names.map(n=>{
+    const st=n.stages==null?'—':n.stages==='standalone'?'単独':String(n.stages);
+    return `| ${n.id} | ${n.base||'—'} | ${n.mid||'—'} | ${n.final||'—'} | ${st} | ${n.animal||'—'} | ${n.status} | ${n.section||'—'} | ${(n.habitat||[]).join('・')} | ${(n.type||[]).join('・')} | ${(n.memo||'').replace(/\|/g,'｜')} |`;
+  });
+  return [hdr,sep,...rows].join('\n');
+}
+function spliceTbl(md,tbl){
+  const lines=md.split('\n');
+  const si=lines.findIndex(l=>l.trim()==='## キャラクター一覧');
+  if(si===-1) return md;
+  let ei=lines.length;
+  for(let i=si+1;i<lines.length;i++){if(lines[i].startsWith('## ')){ei=i;break;}}
+  return [...lines.slice(0,si+1),'',tbl,'',...lines.slice(ei)].join('\n');
+}
+$('btn-sync').addEventListener('click',()=>{
+  if(!S.pat){toast('PATが未設定です','e');showPat();return;}
+  const c=diffCount();
+  $('sync-msg').textContent=`${c>0?c+'件の変更を':'現在の状態を'}vocab-app/ETYMON_NAMES.md に反映します。`;
+  $('sync-ov').classList.add('show');
+});
+$('sync-no').addEventListener('click',()=>$('sync-ov').classList.remove('show'));
+$('sync-yes').addEventListener('click',async()=>{
+  $('sync-ov').classList.remove('show'); toast('反映中...','i',15000);
+  try{
+    const info=await ghGet(FILE);
+    const cur=b64d(info.content);
+    const newMd=spliceTbl(cur,buildTbl());
+    const c=diffCount();
+    await ghPut(FILE,newMd,info.sha,`Etymon-tools: ${c}件の変更を反映`);
+    S.snap=JSON.parse(JSON.stringify(S.names));
+    localStorage.setItem('e_snap',JSON.stringify(S.snap));
+    badge(); toast('vocab-app に反映しました ✅','s');
+  }catch(e){toast(`反映失敗: ${e.message}`,'e',7000);}
+});
+async function init(){
+  load();
+  if(!S.names.length){
+    try{
+      const r=await fetch('./names_cache.json');
+      if(!r.ok) throw new Error();
+      S.names=await r.json();
+      if(!S.snap) S.snap=JSON.parse(JSON.stringify(S.names));
+      save(); localStorage.setItem('e_snap',JSON.stringify(S.snap));
+      toast('names_cache.json を読み込みました','s');
+    }catch{toast('npm run fetch を実行してデータを取得してください','i',8000);}
+  }
+  if(!S.snap&&S.names.length){
+    S.snap=JSON.parse(JSON.stringify(S.names));
+    localStorage.setItem('e_snap',JSON.stringify(S.snap));
+  }
+  if(!S.pat) showPat();
+  initFilters(); renderAll();
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "etymon-tools",
+  "version": "2.0.0",
+  "description": "Etymon naming management tool for vocab-app",
+  "scripts": {
+    "fetch": "node scripts/fetch_names.js"
+  }
+}
