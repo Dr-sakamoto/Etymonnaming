@@ -189,7 +189,7 @@ body {
 <div class="overlay" id="pat-ov">
   <div class="modal" style="max-width:380px">
     <div class="m-title">&#128273; GitHub PAT を入力</div>
-    <p style="font-size:12px;color:var(--text-muted)">vocab-app への反映に必要。スコープ: <code>public_repo</code></p>
+    <p style="font-size:12px;color:var(--text-muted)">vocab-app への反映に必要。スコープ: <code>repo</code></p>
     <input type="password" class="pat-inp" id="pat-inp" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
     <p class="note">PAT は localStorage に保存。設定画面から削除できます。</p>
     <div class="m-actions">
@@ -248,9 +248,11 @@ body {
       <div class="pane-lbl">GitHub PAT</div>
       <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
         <span id="pat-disp" style="font-family:monospace;font-size:12px;color:var(--text-muted)"></span>
+        <button class="btn btn-sm btn-secondary" id="pat-test">&#128337; 接続テスト</button>
         <button class="btn btn-sm btn-secondary" id="pat-change">変更</button>
         <button class="btn btn-sm btn-danger" id="pat-del">削除</button>
       </div>
+      <div id="test-result" style="font-size:11px;margin-top:6px;color:var(--text-muted)"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px">
       <div>
@@ -536,6 +538,7 @@ $('pat-skip').addEventListener('click',hidePat);
 function showCfg(){
   const p=S.pat;
   $('pat-disp').textContent=p?p.slice(0,4)+'*'.repeat(Math.max(0,p.length-4)):'（未設定）';
+  $('test-result').textContent='';
   renderMaster('h-master',S.hTags,'habitat'); renderMaster('t-master',S.tTags,'type');
   $('cfg-ov').classList.add('show');
 }
@@ -579,6 +582,27 @@ $('t-add').addEventListener('click',()=>{
   const v=$('t-inp').value.trim(); if(!v||S.tTags.includes(v)) return;
   S.tTags.push(v); save(); $('t-inp').value='';
   renderMaster('t-master',S.tTags,'type'); toast(`属性「${v}」追加`,'s');
+});
+$('pat-test').addEventListener('click',async()=>{
+  if(!S.pat){toast('PATが未設定','e');return;}
+  const el=$('test-result');
+  el.textContent='テスト中...';
+  el.style.color='var(--text-muted)';
+  try{
+    const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}`,
+      {headers:{'Authorization':`Bearer ${S.pat}`,'Accept':'application/vnd.github.v3+json'}});
+    const d=await r.json();
+    if(r.ok){
+      el.textContent=`✅ 接続OK: ${d.full_name} (${d.private?'private':'public'}) — プッシュ権: ${d.permissions?.push?'あり':'なし'}`;
+      el.style.color='var(--confirmed)';
+    } else {
+      el.textContent=`❌ エラー ${r.status}: ${d.message}`;
+      el.style.color='var(--rejected)';
+    }
+  }catch(e){
+    el.textContent=`❌ ネットワークエラー: ${e.message}`;
+    el.style.color='var(--rejected)';
+  }
 });
 $('pat-change').addEventListener('click',()=>{$('cfg-ov').classList.remove('show');showPat();});
 $('pat-del').addEventListener('click',()=>{
@@ -660,7 +684,7 @@ function b64d(b){return decodeURIComponent(escape(atob(b.replace(/\n/g,''))));}
 async function ghGet(p){
   const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${p}`,
     {headers:{'Authorization':`Bearer ${S.pat}`,'Accept':'application/vnd.github.v3+json'}});
-  if(!r.ok) throw new Error(`GitHub API ${r.status}`);
+  if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(`GET ${r.status}: ${d.message||'error'}`);}  
   return r.json();
 }
 async function ghPut(p,content,sha,msg){
@@ -669,7 +693,7 @@ async function ghPut(p,content,sha,msg){
     headers:{'Authorization':`Bearer ${S.pat}`,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
     body:JSON.stringify({message:msg,content:b64e(content),sha})
   });
-  if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.message||`GitHub API ${r.status}`);}
+  if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(`PUT ${r.status}: ${d.message||'error'}`);}  
   return r.json();
 }
 function buildTbl(){
