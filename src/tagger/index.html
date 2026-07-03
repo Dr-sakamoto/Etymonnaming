@@ -278,6 +278,7 @@ body {
   <span id="badge"></span>
   <button class="btn btn-success" id="btn-new">&#10003; 新規採用</button>
   <button class="btn btn-primary" id="btn-sync">&#128260; 反映</button>
+  <button class="btn btn-secondary" id="btn-export">&#128228; エクスポート</button>
   <button class="btn btn-secondary" id="btn-cfg">&#9881;</button>
 </div>
 
@@ -587,6 +588,17 @@ $('pat-del').addEventListener('click',()=>{
 });
 $('cfg-close').addEventListener('click',()=>$('cfg-ov').classList.remove('show'));
 $('btn-cfg').addEventListener('click',showCfg);
+$('btn-export').addEventListener('click',()=>{
+  const data=JSON.stringify(S.names,null,2);
+  navigator.clipboard.writeText(data)
+    .then(()=>toast('コピー完了。Claudeに貼り付けてください','s',5000))
+    .catch(()=>{
+      const ta=document.createElement('textarea');
+      ta.value=data; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      toast('コピー完了。Claudeに貼り付けてください','s',5000);
+    });
+});
 
 let ncP=null;
 function showNew(){
