@@ -46,8 +46,13 @@ function parseTable(markdown) {
     const cells = line.split('|').slice(1, -1).map(c => c.trim());
     if (cells.length < 11) continue;
 
-    const [id, base, mid, final_, stages, animal, status, section, habitat, type_, memo] = cells;
+    const [id, base, mid, final_, stages, animal, status, section, habitat, type_, col10, col11] = cells;
     if (!id || id.startsWith('---')) continue;
+    // ETYMON_NAMES.md may still be in the pre-mood 11-column format; treat col10 as
+    // mood only once the table actually has 12 columns, else it's memo.
+    const hasMood = cells.length >= 12;
+    const mood_ = hasMood ? col10 : '';
+    const memo = hasMood ? col11 : col10;
 
     rows.push({
       id,
@@ -60,6 +65,7 @@ function parseTable(markdown) {
       section: parseSection(section),
       habitat: parseTags(habitat),
       type: parseTags(type_),
+      mood: parseTags(mood_),
       memo: memo || ''
     });
   }
