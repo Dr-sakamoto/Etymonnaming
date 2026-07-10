@@ -206,7 +206,7 @@ body {
     <div class="m-title">&#10003; 新規採用</div>
     <div id="nc-form">
       <div class="grid2">
-        <div class="fg"><label class="fl">内部ID *</label><input type="text" class="fi" id="nc-id" placeholder="bulbasaur"></div>
+        <div class="fg"><label class="fl">内部ID *</label><input type="text" class="fi" id="nc-id" list="nc-id-list" autocomplete="off" placeholder="bulbasaur（候補から選択可）"><datalist id="nc-id-list"></datalist></div>
         <div class="fg"><label class="fl">ステージ</label><select class="fs" id="nc-stages"><option value="2">2段階</option><option value="3">3段階</option><option value="standalone">単独</option></select></div>
         <div class="fg"><label class="fl">基本形</label><input type="text" class="fi" id="nc-base"></div>
         <div class="fg"><label class="fl">中間形</label><input type="text" class="fi" id="nc-mid"></div>
@@ -394,6 +394,9 @@ const DEF_HAB = ['森','草原','砂漠','雪山','海','深海','川','湿地',
 const DEF_TYPE = ['炎','水','草','電気','氷','格闘','毒','地面','飛行','エスパー','虫','岩','ゴースト','ドラゴン','悪','鉄','フェアリー','ノーマル'];
 const DEF_MOOD = ['かわいい','カッコいい','強そう','怖い','不思議','上品','ユーモラス','ワイルド','幻想的','邪悪','神々しい','レトロ'];
 const OWNER='Dr-sakamoto',REPO='vocab-app',FILE='ETYMON_NAMES.md';
+// 内部ID候補（第1世代 全国図鑑 No.1〜151 の内部名）。新規採用の内部ID入力で
+// datalist のサジェストとして使う。既存IDと同じ命名規約に合わせて小文字・記号なし。
+const DEX=['bulbasaur','ivysaur','venusaur','charmander','charmeleon','charizard','squirtle','wartortle','blastoise','caterpie','metapod','butterfree','weedle','kakuna','beedrill','pidgey','pidgeotto','pidgeot','rattata','raticate','spearow','fearow','ekans','arbok','pikachu','raichu','sandshrew','sandslash','nidoran','nidorina','nidoqueen','nidorino','nidoking','clefairy','clefable','vulpix','ninetales','jigglypuff','wigglytuff','zubat','golbat','oddish','gloom','vileplume','paras','parasect','venonat','venomoth','diglett','dugtrio','meowth','persian','psyduck','golduck','mankey','primeape','growlithe','arcanine','poliwag','poliwhirl','poliwrath','abra','kadabra','alakazam','machop','machoke','machamp','bellsprout','weepinbell','victreebel','tentacool','tentacruel','geodude','graveler','golem','ponyta','rapidash','slowpoke','slowbro','magnemite','magneton','farfetchd','doduo','dodrio','seel','dewgong','grimer','muk','shellder','cloyster','gastly','haunter','gengar','onix','drowzee','hypno','krabby','kingler','voltorb','electrode','exeggcute','exeggutor','cubone','marowak','hitmonlee','hitmonchan','lickitung','koffing','weezing','rhyhorn','rhydon','chansey','tangela','kangaskhan','horsea','seadra','goldeen','seaking','staryu','starmie','mr-mime','scyther','jynx','electabuzz','magmar','pinsir','tauros','magikarp','gyarados','lapras','ditto','eevee','vaporeon','jolteon','flareon','porygon','omanyte','omastar','kabuto','kabutops','aerodactyl','snorlax','articuno','zapdos','moltres','dratini','dragonair','dragonite','mewtwo','mew'];
 
 let S={names:[],hTags:[],tTags:[],mTags:[],pat:null,selId:null,snap:null,
   f:{status:'confirmed',secs:new Set(['A','B','C','D','E','standalone','']),q:''}};
@@ -650,8 +653,17 @@ $('btn-export').addEventListener('click',()=>{
 });
 
 let ncP=null;
+function fillIdSuggest(){
+  const used=new Set(S.names.map(n=>n.id));
+  $('nc-id-list').innerHTML=DEX
+    .map((name,i)=>({name,no:i+1}))
+    .filter(o=>!used.has(o.name))
+    .map(o=>`<option value="${o.name}" label="No.${String(o.no).padStart(3,'0')}">`)
+    .join('');
+}
 function showNew(){
   qsa('#nc-form input[type=text],#nc-form textarea').forEach(el=>el.value='');
+  fillIdSuggest();
   $('nc-stages').value='2'; $('nc-status').value='confirmed'; $('nc-section').value='A';
   $('nc-h').innerHTML=S.hTags.map(t=>`<label class="tcb"><input type="checkbox" value="${t}"> <span>${t}</span></label>`).join('');
   $('nc-t').innerHTML=S.tTags.map(t=>`<label class="tcb"><input type="checkbox" value="${t}"> <span>${t}</span></label>`).join('');
