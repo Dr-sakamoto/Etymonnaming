@@ -123,6 +123,16 @@ body {
 .fta { resize: vertical; min-height: 50px; font-family: inherit; }
 .fs option { background: var(--surface); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.id-sugg {
+  position: absolute; z-index: 20; top: 100%; left: 0; right: 0; margin-top: 2px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  max-height: 180px; overflow-y: auto; display: none; box-shadow: 0 4px 10px rgba(0,0,0,.35);
+}
+.id-sugg.show { display: block; }
+.id-sugg-item { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 5px 9px; font-size: 12px; cursor: pointer; }
+.id-sugg-item:hover, .id-sugg-item.hi { background: var(--surface2); }
+.id-sugg-en { color: var(--text-muted); font-size: 10px; white-space: nowrap; }
+.id-sugg-empty { padding: 6px 9px; font-size: 11px; color: var(--text-muted); }
 .tag-cbs { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 4px; }
 .tcb { display: flex; align-items: center; gap: 3px; font-size: 11px; cursor: pointer; }
 .custom-row { display: flex; gap: 4px; margin-top: 3px; }
@@ -206,7 +216,7 @@ body {
     <div class="m-title">&#10003; 新規採用</div>
     <div id="nc-form">
       <div class="grid2">
-        <div class="fg"><label class="fl">内部ID *</label><input type="text" class="fi" id="nc-id" list="nc-id-list" autocomplete="off" placeholder="bulbasaur（候補から選択可）"><datalist id="nc-id-list"></datalist></div>
+        <div class="fg" style="position:relative"><label class="fl">内部ID *</label><input type="text" class="fi" id="nc-id" autocomplete="off" placeholder="フシギダネ等、日本語名で検索"><div class="id-sugg" id="nc-id-sugg"></div></div>
         <div class="fg"><label class="fl">ステージ</label><select class="fs" id="nc-stages"><option value="2">2段階</option><option value="3">3段階</option><option value="standalone">単独</option></select></div>
         <div class="fg"><label class="fl">基本形</label><input type="text" class="fi" id="nc-base"></div>
         <div class="fg"><label class="fl">中間形</label><input type="text" class="fi" id="nc-mid"></div>
@@ -394,9 +404,10 @@ const DEF_HAB = ['森','草原','砂漠','雪山','海','深海','川','湿地',
 const DEF_TYPE = ['炎','水','草','電気','氷','格闘','毒','地面','飛行','エスパー','虫','岩','ゴースト','ドラゴン','悪','鉄','フェアリー','ノーマル'];
 const DEF_MOOD = ['かわいい','カッコいい','強そう','怖い','不思議','上品','ユーモラス','ワイルド','幻想的','邪悪','神々しい','レトロ'];
 const OWNER='Dr-sakamoto',REPO='vocab-app',FILE='ETYMON_NAMES.md';
-// 内部ID候補（第1世代 全国図鑑 No.1〜151 の内部名）。新規採用の内部ID入力で
-// datalist のサジェストとして使う。既存IDと同じ命名規約に合わせて小文字・記号なし。
-const DEX=['bulbasaur','ivysaur','venusaur','charmander','charmeleon','charizard','squirtle','wartortle','blastoise','caterpie','metapod','butterfree','weedle','kakuna','beedrill','pidgey','pidgeotto','pidgeot','rattata','raticate','spearow','fearow','ekans','arbok','pikachu','raichu','sandshrew','sandslash','nidoran','nidorina','nidoqueen','nidorino','nidoking','clefairy','clefable','vulpix','ninetales','jigglypuff','wigglytuff','zubat','golbat','oddish','gloom','vileplume','paras','parasect','venonat','venomoth','diglett','dugtrio','meowth','persian','psyduck','golduck','mankey','primeape','growlithe','arcanine','poliwag','poliwhirl','poliwrath','abra','kadabra','alakazam','machop','machoke','machamp','bellsprout','weepinbell','victreebel','tentacool','tentacruel','geodude','graveler','golem','ponyta','rapidash','slowpoke','slowbro','magnemite','magneton','farfetchd','doduo','dodrio','seel','dewgong','grimer','muk','shellder','cloyster','gastly','haunter','gengar','onix','drowzee','hypno','krabby','kingler','voltorb','electrode','exeggcute','exeggutor','cubone','marowak','hitmonlee','hitmonchan','lickitung','koffing','weezing','rhyhorn','rhydon','chansey','tangela','kangaskhan','horsea','seadra','goldeen','seaking','staryu','starmie','mr-mime','scyther','jynx','electabuzz','magmar','pinsir','tauros','magikarp','gyarados','lapras','ditto','eevee','vaporeon','jolteon','flareon','porygon','omanyte','omastar','kabuto','kabutops','aerodactyl','snorlax','articuno','zapdos','moltres','dratini','dragonair','dragonite','mewtwo','mew'];
+// 内部ID候補（第1世代 全国図鑑 No.1〜151 の内部名＋和名）。新規採用の内部ID入力で
+// 和名から検索して選べるサジェストに使う。内部IDそのものは既存の命名規約通り英語小文字。
+// nidoran はオス・メス共通の1エントリ（vocab-app 側の内部IDに性別区別がないため）。
+const DEX=[['bulbasaur','フシギダネ'],['ivysaur','フシギソウ'],['venusaur','フシギバナ'],['charmander','ヒトカゲ'],['charmeleon','リザード'],['charizard','リザードン'],['squirtle','ゼニガメ'],['wartortle','カメール'],['blastoise','カメックス'],['caterpie','キャタピー'],['metapod','トランセル'],['butterfree','バタフリー'],['weedle','ビードル'],['kakuna','コクーン'],['beedrill','スピアー'],['pidgey','ポッポ'],['pidgeotto','ピジョン'],['pidgeot','ピジョット'],['rattata','コラッタ'],['raticate','ラッタ'],['spearow','オニスズメ'],['fearow','オニドリル'],['ekans','アーボ'],['arbok','アーボック'],['pikachu','ピカチュウ'],['raichu','ライチュウ'],['sandshrew','サンド'],['sandslash','サンドパン'],['nidoran','ニドラン（♂/♀）'],['nidorina','ニドリーナ'],['nidoqueen','ニドクイン'],['nidorino','ニドリーノ'],['nidoking','ニドキング'],['clefairy','ピッピ'],['clefable','ピクシー'],['vulpix','ロコン'],['ninetales','キュウコン'],['jigglypuff','プリン'],['wigglytuff','プクリン'],['zubat','ズバット'],['golbat','ゴルバット'],['oddish','ナゾノクサ'],['gloom','クサイハナ'],['vileplume','ラフレシア'],['paras','パラス'],['parasect','パラセクト'],['venonat','コンパン'],['venomoth','モルフォン'],['diglett','ディグダ'],['dugtrio','ダグトリオ'],['meowth','ニャース'],['persian','ペルシアン'],['psyduck','コダック'],['golduck','ゴルダック'],['mankey','マンキー'],['primeape','オコリザル'],['growlithe','ガーディ'],['arcanine','ウインディ'],['poliwag','ニョロモ'],['poliwhirl','ニョロゾ'],['poliwrath','ニョロボン'],['abra','ケーシィ'],['kadabra','ユンゲラー'],['alakazam','フーディン'],['machop','ワンリキー'],['machoke','ゴーリキー'],['machamp','カイリキー'],['bellsprout','マダツボミ'],['weepinbell','ウツドン'],['victreebel','ウツボット'],['tentacool','メノクラゲ'],['tentacruel','ドククラゲ'],['geodude','イシツブテ'],['graveler','ゴローン'],['golem','ゴローニャ'],['ponyta','ポニータ'],['rapidash','ギャロップ'],['slowpoke','ヤドン'],['slowbro','ヤドラン'],['magnemite','コイル'],['magneton','レアコイル'],['farfetchd','カモネギ'],['doduo','ドードー'],['dodrio','ドードリオ'],['seel','パウワウ'],['dewgong','ジュゴン'],['grimer','ベトベター'],['muk','ベトベトン'],['shellder','シェルダー'],['cloyster','パルシェン'],['gastly','ゴース'],['haunter','ゴースト'],['gengar','ゲンガー'],['onix','イワーク'],['drowzee','スリープ'],['hypno','スリーパー'],['krabby','クラブ'],['kingler','キングラー'],['voltorb','ビリリダマ'],['electrode','マルマイン'],['exeggcute','タマタマ'],['exeggutor','ナッシー'],['cubone','カラカラ'],['marowak','ガラガラ'],['hitmonlee','サワムラー'],['hitmonchan','エビワラー'],['lickitung','ベロリンガ'],['koffing','ドガース'],['weezing','マタドガス'],['rhyhorn','サイホーン'],['rhydon','サイドン'],['chansey','ラッキー'],['tangela','モンジャラ'],['kangaskhan','ガルーラ'],['horsea','タッツー'],['seadra','シードラ'],['goldeen','トサキント'],['seaking','アズマオウ'],['staryu','ヒトデマン'],['starmie','スターミー'],['mr-mime','バリヤード'],['scyther','ストライク'],['jynx','ルージュラ'],['electabuzz','エレブー'],['magmar','ブーバー'],['pinsir','カイロス'],['tauros','ケンタロス'],['magikarp','コイキング'],['gyarados','ギャラドス'],['lapras','ラプラス'],['ditto','メタモン'],['eevee','イーブイ'],['vaporeon','シャワーズ'],['jolteon','サンダース'],['flareon','ブースター'],['porygon','ポリゴン'],['omanyte','オムナイト'],['omastar','オムスター'],['kabuto','カブト'],['kabutops','カブトプス'],['aerodactyl','プテラ'],['snorlax','カビゴン'],['articuno','フリーザー'],['zapdos','サンダー'],['moltres','ファイヤー'],['dratini','ミニリュウ'],['dragonair','ハクリュー'],['dragonite','カイリュー'],['mewtwo','ミュウツー'],['mew','ミュウ']];
 
 let S={names:[],hTags:[],tTags:[],mTags:[],pat:null,selId:null,snap:null,
   f:{status:'confirmed',secs:new Set(['A','B','C','D','E','standalone','']),q:''}};
@@ -653,17 +664,26 @@ $('btn-export').addEventListener('click',()=>{
 });
 
 let ncP=null;
+let ncIdCands=[];
 function fillIdSuggest(){
   const used=new Set(S.names.map(n=>n.id));
-  $('nc-id-list').innerHTML=DEX
-    .map((name,i)=>({name,no:i+1}))
-    .filter(o=>!used.has(o.name))
-    .map(o=>`<option value="${o.name}" label="No.${String(o.no).padStart(3,'0')}">`)
-    .join('');
+  ncIdCands=DEX.filter(([id])=>!used.has(id));
 }
+function ncIdFilter(q){
+  const t=(q||'').trim().toLowerCase();
+  if(!t) return ncIdCands;
+  return ncIdCands.filter(([id,ja])=>id.toLowerCase().includes(t)||ja.includes(q.trim()));
+}
+function renderIdSugg(list){
+  const el=$('nc-id-sugg');
+  if(!list.length){el.innerHTML='<div class="id-sugg-empty">候補なし（自由入力可）</div>';el.classList.add('show');return;}
+  el.innerHTML=list.map(([id,ja])=>`<div class="id-sugg-item" data-id="${id}"><span class="id-sugg-ja">${ja}</span><span class="id-sugg-en">${id}</span></div>`).join('');
+  el.classList.add('show');
+}
+function hideIdSugg(){$('nc-id-sugg').classList.remove('show');}
 function showNew(){
   qsa('#nc-form input[type=text],#nc-form textarea').forEach(el=>el.value='');
-  fillIdSuggest();
+  fillIdSuggest(); hideIdSugg();
   $('nc-stages').value='2'; $('nc-status').value='confirmed'; $('nc-section').value='A';
   $('nc-h').innerHTML=S.hTags.map(t=>`<label class="tcb"><input type="checkbox" value="${t}"> <span>${t}</span></label>`).join('');
   $('nc-t').innerHTML=S.tTags.map(t=>`<label class="tcb"><input type="checkbox" value="${t}"> <span>${t}</span></label>`).join('');
@@ -674,6 +694,14 @@ function showNew(){
 }
 $('btn-new').addEventListener('click',showNew);
 $('nc-cancel').addEventListener('click',()=>$('nc-ov').classList.remove('show'));
+$('nc-id').addEventListener('focus',()=>renderIdSugg(ncIdFilter($('nc-id').value)));
+$('nc-id').addEventListener('input',()=>renderIdSugg(ncIdFilter($('nc-id').value)));
+$('nc-id').addEventListener('blur',hideIdSugg);
+$('nc-id-sugg').addEventListener('mousedown',e=>{
+  const item=e.target.closest('.id-sugg-item'); if(!item) return;
+  e.preventDefault();
+  $('nc-id').value=item.dataset.id; hideIdSugg();
+});
 $('nc-confirm').addEventListener('click',()=>{
   const id=$('nc-id').value.trim(), fin=$('nc-final').value.trim();
   if(!id||!fin){toast('IDと最終形は必須','e');return;}
