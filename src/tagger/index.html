@@ -194,6 +194,26 @@ body {
   .modal { max-height: 85dvh; width: 95%; }
   .btn { font-size: 11px; padding: 5px 8px; }
 }
+/* エリアスプライト設定 */
+#area-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; margin: 4px 0 12px; }
+.area-row {
+  display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+}
+.area-prev {
+  width: 56px; height: 56px; border-radius: 5px; background: var(--surface2);
+  border: 1px solid var(--border); object-fit: cover; image-rendering: pixelated;
+  display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--text-muted); text-align: center;
+}
+.area-name { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+.area-id { font-size: 10px; color: var(--text-muted); margin-bottom: 5px; font-family: monospace; }
+.area-fields { display: flex; flex-direction: column; gap: 4px; }
+.area-fields input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  padding: 5px 8px; border-radius: 4px; font-size: 11px;
+}
+.area-fields input:focus { outline: none; border-color: var(--accent); }
+.area-fields label { font-size: 9px; color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -288,6 +308,25 @@ body {
   </div>
 </div>
 
+<div class="overlay" id="area-ov">
+  <div class="modal">
+    <div class="m-title">&#128506;&#65039; エリアスプライト設定</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">
+      各エリア（ハビタット）の背景スプライトを設定します。画像は vocab-app の
+      <code>public/</code> 配下に置き、そのパス（例: <code>/areas/elmuria.png</code>）を入力してください。
+      URL でも可。空欄なら vocab-app では画像なし表示になります。
+    </p>
+    <div style="display:flex;gap:7px;margin-bottom:6px">
+      <button class="btn btn-sm btn-secondary" id="area-fetch">&#128260; vocab-appから取得</button>
+    </div>
+    <div id="area-list"></div>
+    <div class="m-actions">
+      <button class="btn btn-secondary" id="area-close">閉じる</button>
+      <button class="btn btn-success" id="area-sync">&#128260; vocab-appに反映</button>
+    </div>
+  </div>
+</div>
+
 <div id="header">
   <h1>Etymon Tools</h1>
   <div id="prog-wrap">
@@ -297,6 +336,7 @@ body {
   <span class="spacer"></span>
   <span id="badge"></span>
   <button class="btn btn-success" id="btn-new">&#10003; 新規採用</button>
+  <button class="btn btn-secondary" id="btn-area">&#128506;&#65039; エリア</button>
   <button class="btn btn-primary" id="btn-sync">&#128260; 反映</button>
   <button class="btn btn-secondary" id="btn-export">&#128228; エクスポート</button>
   <button class="btn btn-secondary" id="btn-cfg">&#9881;</button>
@@ -404,12 +444,15 @@ const DEF_HAB = ['森','草原','砂漠','雪山','海','深海','川','湿地',
 const DEF_TYPE = ['炎','水','草','電気','氷','格闘','毒','地面','飛行','エスパー','虫','岩','ゴースト','ドラゴン','悪','鉄','フェアリー','ノーマル'];
 const DEF_MOOD = ['かわいい','カッコいい','強そう','怖い','不思議','上品','ユーモラス','ワイルド','幻想的','邪悪','神々しい','レトロ'];
 const OWNER='Dr-sakamoto',REPO='vocab-app',FILE='ETYMON_NAMES.md';
+// エリアスプライトの正本（vocab-app が直接読む JSON）。反映はこのファイルを丸ごと更新する。
+const AREA_FILE='lib/habitatSprites.json';
+const AREA_RAW_URL=`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${AREA_FILE}`;
 // 内部ID候補（第1世代 全国図鑑 No.1〜151 の内部名＋和名）。新規採用の内部ID入力で
 // 和名から検索して選べるサジェストに使う。内部IDそのものは既存の命名規約通り英語小文字。
 // nidoran はオス・メス共通の1エントリ（vocab-app 側の内部IDに性別区別がないため）。
 const DEX=[['bulbasaur','フシギダネ'],['ivysaur','フシギソウ'],['venusaur','フシギバナ'],['charmander','ヒトカゲ'],['charmeleon','リザード'],['charizard','リザードン'],['squirtle','ゼニガメ'],['wartortle','カメール'],['blastoise','カメックス'],['caterpie','キャタピー'],['metapod','トランセル'],['butterfree','バタフリー'],['weedle','ビードル'],['kakuna','コクーン'],['beedrill','スピアー'],['pidgey','ポッポ'],['pidgeotto','ピジョン'],['pidgeot','ピジョット'],['rattata','コラッタ'],['raticate','ラッタ'],['spearow','オニスズメ'],['fearow','オニドリル'],['ekans','アーボ'],['arbok','アーボック'],['pikachu','ピカチュウ'],['raichu','ライチュウ'],['sandshrew','サンド'],['sandslash','サンドパン'],['nidoran','ニドラン（♂/♀）'],['nidorina','ニドリーナ'],['nidoqueen','ニドクイン'],['nidorino','ニドリーノ'],['nidoking','ニドキング'],['clefairy','ピッピ'],['clefable','ピクシー'],['vulpix','ロコン'],['ninetales','キュウコン'],['jigglypuff','プリン'],['wigglytuff','プクリン'],['zubat','ズバット'],['golbat','ゴルバット'],['oddish','ナゾノクサ'],['gloom','クサイハナ'],['vileplume','ラフレシア'],['paras','パラス'],['parasect','パラセクト'],['venonat','コンパン'],['venomoth','モルフォン'],['diglett','ディグダ'],['dugtrio','ダグトリオ'],['meowth','ニャース'],['persian','ペルシアン'],['psyduck','コダック'],['golduck','ゴルダック'],['mankey','マンキー'],['primeape','オコリザル'],['growlithe','ガーディ'],['arcanine','ウインディ'],['poliwag','ニョロモ'],['poliwhirl','ニョロゾ'],['poliwrath','ニョロボン'],['abra','ケーシィ'],['kadabra','ユンゲラー'],['alakazam','フーディン'],['machop','ワンリキー'],['machoke','ゴーリキー'],['machamp','カイリキー'],['bellsprout','マダツボミ'],['weepinbell','ウツドン'],['victreebel','ウツボット'],['tentacool','メノクラゲ'],['tentacruel','ドククラゲ'],['geodude','イシツブテ'],['graveler','ゴローン'],['golem','ゴローニャ'],['ponyta','ポニータ'],['rapidash','ギャロップ'],['slowpoke','ヤドン'],['slowbro','ヤドラン'],['magnemite','コイル'],['magneton','レアコイル'],['farfetchd','カモネギ'],['doduo','ドードー'],['dodrio','ドードリオ'],['seel','パウワウ'],['dewgong','ジュゴン'],['grimer','ベトベター'],['muk','ベトベトン'],['shellder','シェルダー'],['cloyster','パルシェン'],['gastly','ゴース'],['haunter','ゴースト'],['gengar','ゲンガー'],['onix','イワーク'],['drowzee','スリープ'],['hypno','スリーパー'],['krabby','クラブ'],['kingler','キングラー'],['voltorb','ビリリダマ'],['electrode','マルマイン'],['exeggcute','タマタマ'],['exeggutor','ナッシー'],['cubone','カラカラ'],['marowak','ガラガラ'],['hitmonlee','サワムラー'],['hitmonchan','エビワラー'],['lickitung','ベロリンガ'],['koffing','ドガース'],['weezing','マタドガス'],['rhyhorn','サイホーン'],['rhydon','サイドン'],['chansey','ラッキー'],['tangela','モンジャラ'],['kangaskhan','ガルーラ'],['horsea','タッツー'],['seadra','シードラ'],['goldeen','トサキント'],['seaking','アズマオウ'],['staryu','ヒトデマン'],['starmie','スターミー'],['mr-mime','バリヤード'],['scyther','ストライク'],['jynx','ルージュラ'],['electabuzz','エレブー'],['magmar','ブーバー'],['pinsir','カイロス'],['tauros','ケンタロス'],['magikarp','コイキング'],['gyarados','ギャラドス'],['lapras','ラプラス'],['ditto','メタモン'],['eevee','イーブイ'],['vaporeon','シャワーズ'],['jolteon','サンダース'],['flareon','ブースター'],['porygon','ポリゴン'],['omanyte','オムナイト'],['omastar','オムスター'],['kabuto','カブト'],['kabutops','カブトプス'],['aerodactyl','プテラ'],['snorlax','カビゴン'],['articuno','フリーザー'],['zapdos','サンダー'],['moltres','ファイヤー'],['dratini','ミニリュウ'],['dragonair','ハクリュー'],['dragonite','カイリュー'],['mewtwo','ミュウツー'],['mew','ミュウ']];
 
-let S={names:[],hTags:[],tTags:[],mTags:[],pat:null,selId:null,snap:null,
+let S={names:[],hTags:[],tTags:[],mTags:[],pat:null,selId:null,snap:null,areas:[],
   f:{status:'confirmed',secs:new Set(['A','B','C','D','E','standalone','']),q:''}};
 
 const $=id=>document.getElementById(id);
@@ -807,6 +850,80 @@ $('sync-yes').addEventListener('click',async()=>{
     badge(); toast('vocab-app に反映しました ✅','s');
   }catch(e){toast(`反映失敗: ${e.message}`,'e',7000);}
 });
+// ===== エリアスプライト設定 =====
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function saveAreas(){localStorage.setItem('e_areas',JSON.stringify(S.areas));}
+function loadAreas(){const a=localStorage.getItem('e_areas');if(a){try{S.areas=JSON.parse(a);}catch{S.areas=[];}}}
+function normalizeAreas(list){
+  return (Array.isArray(list)?list:[]).map(a=>({
+    id:String(a&&a.id||''), name:String(a&&(a.name||a.id)||''),
+    sprite:a&&typeof a.sprite==='string'?a.sprite:'',
+    fallbackSprite:a&&typeof a.fallbackSprite==='string'?a.fallbackSprite:''
+  })).filter(a=>a.id);
+}
+function renderAreas(){
+  const box=$('area-list');
+  if(!S.areas.length){box.innerHTML='<div class="empty">エリア未取得。「vocab-appから取得」を押してください。</div>';return;}
+  box.innerHTML='';
+  S.areas.forEach((a,i)=>{
+    const row=document.createElement('div'); row.className='area-row';
+    row.innerHTML=`${a.sprite?'<img class="area-prev" alt="">':'<div class="area-prev">未設定</div>'}
+      <div>
+        <div class="area-name">${esc(a.name)}</div>
+        <div class="area-id">${esc(a.id)}</div>
+        <div class="area-fields">
+          <label>スプライト画像パス / URL</label>
+          <input type="text" data-i="${i}" data-k="sprite" placeholder="/areas/${esc(a.id)}.png">
+          <label>フォールバック画像（任意）</label>
+          <input type="text" data-i="${i}" data-k="fallbackSprite" placeholder="（任意）">
+        </div>
+      </div>`;
+    box.appendChild(row);
+    const img=row.querySelector('img.area-prev');
+    if(img){img.src=a.sprite; img.onerror=()=>{const d=document.createElement('div');d.className='area-prev';d.textContent='画像なし';img.replaceWith(d);};}
+    row.querySelector('[data-k="sprite"]').value=a.sprite||'';
+    row.querySelector('[data-k="fallbackSprite"]').value=a.fallbackSprite||'';
+  });
+  qsa('#area-list input').forEach(inp=>inp.addEventListener('input',e=>{
+    const i=+e.target.dataset.i, k=e.target.dataset.k;
+    if(S.areas[i]){S.areas[i][k]=e.target.value; saveAreas();}
+  }));
+}
+async function fetchAreas(){
+  toast('取得中...','i',8000);
+  try{
+    const r=await fetch(AREA_RAW_URL,{cache:'no-store'});
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j=await r.json();
+    const incoming=normalizeAreas(Array.isArray(j)?j:j.areas);
+    if(!incoming.length) throw new Error('エリアが空です');
+    // 既存のローカル入力は保持しつつ、リスト（新エリアや名前）を最新に更新
+    const cur={}; S.areas.forEach(a=>{cur[a.id]=a;});
+    S.areas=incoming.map(a=>{
+      const p=cur[a.id];
+      return p?{...a,sprite:p.sprite||a.sprite,fallbackSprite:p.fallbackSprite||a.fallbackSprite}:a;
+    });
+    saveAreas(); renderAreas();
+    toast(`${S.areas.length}エリアを取得しました`,'s');
+  }catch(e){toast(`取得失敗: ${e.message}（未マージの場合は areas_cache.json を使用）`,'e',7000);}
+}
+async function reflectAreas(){
+  if(!S.pat){toast('PATが未設定です','e');showPat();return;}
+  if(!S.areas.length){toast('反映するエリアがありません','e');return;}
+  if(!confirm(`${S.areas.length}エリアのスプライト設定を vocab-app/${AREA_FILE} に反映します。`)) return;
+  toast('反映中...','i',15000);
+  try{
+    const payload=JSON.stringify({areas:S.areas.map(a=>({id:a.id,name:a.name,sprite:a.sprite||'',fallbackSprite:a.fallbackSprite||''}))},null,2)+'\n';
+    let sha;
+    try{const info=await ghGet(AREA_FILE);sha=info.sha;}catch{sha=undefined;} // 未存在なら新規作成
+    await ghPut(AREA_FILE,payload,sha,'Etymon-tools: エリアスプライトを反映');
+    toast('vocab-app に反映しました ✅','s');
+  }catch(e){toast(`反映失敗: ${e.message}`,'e',7000);}
+}
+$('btn-area').addEventListener('click',()=>{renderAreas();$('area-ov').classList.add('show');});
+$('area-close').addEventListener('click',()=>$('area-ov').classList.remove('show'));
+$('area-fetch').addEventListener('click',fetchAreas);
+$('area-sync').addEventListener('click',reflectAreas);
 qsa('.pnav-btn').forEach(b=>b.addEventListener('click',()=>switchPane(b.dataset.pane)));
 async function init(){
   load();
@@ -823,6 +940,13 @@ async function init(){
   if(!S.snap&&S.names.length){
     S.snap=JSON.parse(JSON.stringify(S.names));
     localStorage.setItem('e_snap',JSON.stringify(S.snap));
+  }
+  loadAreas();
+  if(!S.areas.length){
+    try{
+      const r=await fetch('./areas_cache.json');
+      if(r.ok){ S.areas=normalizeAreas(await r.json()); saveAreas(); }
+    }catch{/* エリア初期リストは「vocab-appから取得」で補える */}
   }
   if(!S.pat) showPat();
   initFilters(); renderAll();
